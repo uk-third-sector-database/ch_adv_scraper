@@ -1,3 +1,13 @@
+"""
+This is a short script which scrapes the Companies House
+Advanced Search API for all 'third sector' organisations.
+It can very easily be re-purposed to scrape other types
+of companies!
+
+Author: github.com\crahal
+Last Update: 07/06/2023
+
+"""
 import os
 import csv
 import json
@@ -9,6 +19,13 @@ from requests.auth import HTTPBasicAuth
 
 
 def load_token(path):
+    """
+    Simple function to load a hidden API token from
+    disk: It should live in the `tokens` sub-directory
+    :param path:    A filepath to a text file which contains
+                    an API on the first line of the file only.
+    :return:        The API key read in from the file
+    """
     try:
         with open(path, 'r') as file:
             return str(file.readline()).strip()
@@ -17,6 +34,17 @@ def load_token(path):
 
 
 def parse_query(query_json, filepath):
+    """
+    A simple function to parse a json returned from the API.
+    It iterates over three levels of the object; the outter,
+    meta-layers (etag and hits), the elements of the items
+    which contain general company meta data, and then the nested
+    elements of the address. If any field is not present, fill
+    with ''.
+    :param query_json: A query returned from the API in json format
+    :param filepath: A path to the file which is being output
+    :return: None
+    """
     with open(filepath, 'a', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         for elem in query_json['items']:#
@@ -60,24 +88,27 @@ def parse_query(query_json, filepath):
             writer.writerow(results)
 
 def get_data(CompanyType, filepath):
+    """
+    The main scraper which iterates over months and years
+    beginning from 1850 to the present day for a specific
+    CompanyType. This is necessary because the API only
+    allows the return of up to 10,000 entries per query.
+    (e.g. query['hits']<10000).
+
+    Note: CICs are a _subtype_, as opposed to a CompanyType,
+    and this is handled appropriately with control over the
+    params dictionary which gets passed to the GET request.
+    :param CompanyType: The type of company (inc CIC)
+    :param filepath: The filepath which gets passed to the parser
+    :return: None
+    """
     size = 5000
-    urlquery = CH_url
     hits = np.inf
-    for year in tqdm(range(1900, 2024)):
-        for month in ['01', '02', '03', '04', '05', '06',
-                      '07', '08', '09', '10', '11', '12']:
-            if (month == '01') or (month == '03') or \
-               (month == '05') or (month == '07') or \
-               (month == '08') or (month == '10'):
-                day = '31'
-            elif (month == '04') or (month == '06') or \
-                 (month == '09') or (month == '11'):
-                day = '30'
-            else:
-                if year % 4 == 0:
-                    day = '28'
-                else:
-                    day = '28'
+    for year in tqdm(range(1750, 2024)):
+        for month, day in zip(['01', '02', '03', '04', '05', '06',
+                               '07', '08', '09', '10', '11', '12'],
+                              ['31', '28', '31', '30', '31', '30',
+                               '31', '31', '30', '31', '30', '31']):
             finished_query = False
             pages = 1
             while finished_query is False:
@@ -96,29 +127,35 @@ def get_data(CompanyType, filepath):
                             'incorporated_to': str(year) + '-' + month + '-' + day
                     }
                 if hits > ((pages - 1) * size):
-                    query = requests.get(urlquery,
+                    query = requests.get(CH_url,
                                          auth=HTTPBasicAuth(APIKey, ''),
                                          params=pars)
                     if query.status_code == 200:
                         query_json = json.loads(query.text)
                         hits = query_json['hits']
                         parse_query(query_json, filepath)
-                        if (int(query.headers['X-Ratelimit-Remain']) == 0) or \
-                                (query.status_code == 429):
-                            print('Rate limit hit! Calls remaining: ', int(query.headers['X-Ratelimit-Remain']))
-                            time.sleep(300)
                     elif (query.status_code == 404) or\
                             (query.status_code == 500):
                         finished_query = True
+                    elif (int(query.headers['X-Ratelimit-Remain']) == 0) or \
+                         (query.status_code == 429):
+                        time.sleep(300)
                     else:
-                        time.sleep(10)
-                        print('Huh? bad return, but shouldnt be :',
-                              query.status_code)
+                        print("A wild status code appeared:", query.status_code)
                     pages += 1
                 else:
                     finished_query = True
 
+
 def check_file(filepath):
+    """
+    Check whether an output file exists already, and if it does,
+    delete it. This could become a command line argument? It could
+    also optionally create the subdirectory where this lives if
+    this does not exist!
+    :param filepath: Location of outut of scrape
+    :return: None
+    """
     if os.path.exists(filepath):
         os.remove(filepath)
     header = [
@@ -150,7 +187,10 @@ if __name__ == '__main__':
     path = os.path.join(os.getcwd(), '..', 'data')
     filepath = os.path.join(path, name)
     check_file(filepath)
-    api_key_path = os.path.join(os.getcwd(), '..', 'tokens', 'ch_apikey')
+    api_key_path = os.path.join(os.getcwd(),
+                                '..',
+                                'tokens',
+                                'ch_apikey')
     APIKey = load_token(api_key_path)
     typelist = [
         'private-limited-guarant-nsc',
@@ -161,7 +201,11 @@ if __name__ == '__main__':
         'industrial-and-provident-society',
         'community-interest-company'
     ]
-    CH_url = 'https://api.company-information.service.gov.uk/advanced-search/companies'
+    CH_api = 'https://api.company-information.service.gov.uk/'
+    api_type = 'advanced-search'
+    CH_url = CH_api + api_type + '/companies'
     for CompanyType in typelist:
         print('Working on: ', CompanyType)
         get_data(CompanyType, filepath)
+
+    #@TODO We could optionally de-duplicate or compress this here.
