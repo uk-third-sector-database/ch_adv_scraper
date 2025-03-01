@@ -1,4 +1,4 @@
-### Companies House Advanced Search API Scraper
+## Companies House Advanced Search API Scraper
 ------
 ![coverage](https://img.shields.io/badge/Purpose-Research-yellow)
 [![Generic badge](https://img.shields.io/badge/Python-3.x-red.svg)](https://shields.io/)
