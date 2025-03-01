@@ -5,6 +5,8 @@
 [![Generic badge](https://img.shields.io/badge/License-GNU3.0-purple.svg)](https://shields.io/)
 [![Generic badge](https://img.shields.io/badge/Maintained-Yes-brightgreen.svg)](https://shields.io/)
 [![Generic badge](https://img.shields.io/badge/BuildPassing-Yes-orange.svg)](https://shields.io/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14951542.svg)](https://doi.org/10.5281/zenodo.14951542)
+
 
 A scraper for the Companies House [Advanced Search API](https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/search/advanced-company-search), with the specific intention of collecting data on Third Sector Organisations. The open data on this website is sourced from Public Records made available by [Companies House](https://www.gov.uk/government/organisations/companies-house) and licensed under the [Open Government License](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
 
